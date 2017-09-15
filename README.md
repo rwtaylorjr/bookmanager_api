@@ -1,8 +1,10 @@
 # BookManager API
 
- Simple API for managing books.
+ Simple API for managing books. CRUD operations for books and authors. Secured by JWT.
  
  Requires MongoDB
+ 
+ 
  
 Environment variables:
 
