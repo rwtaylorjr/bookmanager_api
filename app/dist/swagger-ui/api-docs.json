@@ -1,0 +1,95 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "BookManager Spec",
+    "description": "Spec for BookManager App"
+  },
+  "basePath": "/api",
+  "tags" : [
+    {"name": "Books",
+      "description": "API for managing books"
+    }
+  ],
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+      "/books": {
+        "get": {
+          "tags": [
+            "Books"
+          ],
+          "description": "Returns a collection of books",
+          "responses": {
+            "200": {
+              "description": "Successful response",
+              "schema": {
+                "$ref": "#/definitions/books"
+              }
+            },
+            "401": {
+              "description": "Missing security token",
+              "schema": {
+                "$ref": "#/definitions/401"
+              }
+            }
+          }
+        }
+      }
+  },
+  "definitions": {
+    "books": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/book"
+      }
+    },
+    "book" : {
+      "properties": {
+        "_id": {
+          "type": "number",
+          "example" : "1"
+        },
+        "title": {
+          "type": "string",
+          "example": "To Kill A Mocking Bird"
+        },
+        "isbn": {
+          "type": "string",
+          "exmaple": "SU-12345"
+        }
+      }
+    },
+    "401": {
+      "properties": {
+        "message": {
+          "type": "string",
+          "example": "No token provided."
+        },
+        "error": {
+          "type": "object",
+          "$ref": "#/definitions/401ErrorMessage"
+        }
+      }
+    },
+    "401ErrorMessage": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "AppError"
+        },
+        "status": {
+          "type": "number",
+          "example": 401
+        }
+      }
+    }
+  }
+}
