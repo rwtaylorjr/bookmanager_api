@@ -25,12 +25,12 @@ function getAuthor(id) {
     return authorDao.get(id);
 }
 
-function createAuthor(author) {
-    return authorDao.create(author);
+function createAuthor(userId, author) {
+    return authorDao.create(userId, author);
 }
 
-function updateAuthor(author) {
-    return authorDao.update(author);
+function updateAuthor(userId, author) {
+    return authorDao.update(userId, author);
 }
 
 function deleteAuthors(ids) {

@@ -20,6 +20,7 @@ const bookServiceModulePath = modulePath + '/book.service';
 const bookController = require(bookControllerModulePath);
 const bookService = require(bookServiceModulePath);
 const sandbox = sinon.sandbox.create();
+const USER_ID = 1;
 
 describe('Book Controller Unit Test Suite', function(){
 
@@ -28,7 +29,10 @@ describe('Book Controller Unit Test Suite', function(){
         it('is missing title parameter from create request', function(done){
             const expected = new InvalidRequestError('Missing or invalid request parameter(s): [title] must be defined and non-empty');
             let req, res, next;
-            req = {body:{}};
+            req = {
+                body:{},
+                user:{_id:USER_ID}
+            };
             next = function(error) {
                 expectErrorToEqual(error, expected);
                 done();
@@ -89,7 +93,10 @@ describe('Book Controller Unit Test Suite', function(){
 
         beforeEach(function(){
             res = {};
-            req = {body:{}};
+            req = {
+                body:{},
+                user:{_id:USER_ID}
+            };
             req.query = {};
 
             next = function() {
@@ -218,11 +225,8 @@ describe('Book Controller Unit Test Suite', function(){
             const expected = 3;
 
             // Mock
-            sandbox.stub(bookService, 'createBook').callsFake(function(b){
-                // simulate data access layer returning a newly created record
-                let newBook = utils.cloneObject(b);
-                newBook._id = expected;
-                return Promise.resolve(newBook);
+            sandbox.stub(bookService, 'createBook').callsFake(function(userId, b){
+                return Promise.resolve(expected);
             });
 
             // Run
@@ -234,11 +238,11 @@ describe('Book Controller Unit Test Suite', function(){
                 return res;
             };
             res.json = function(payload) {
-                expect(payload._id).to.equal(expected);
+                expect(payload.bookId).to.equal(expected);
                 done();
             }
             expect(bookService.createBook.calledOnce).to.equal(true);
-            assert(bookService.createBook.calledWithMatch(book), 'createBook called with book');
+            assert(bookService.createBook.calledWithMatch(USER_ID, book), 'createBook called with book');
 
         });
 
@@ -256,7 +260,7 @@ describe('Book Controller Unit Test Suite', function(){
             };
 
             // Mock
-            sandbox.stub(bookService, 'createBook').callsFake(function(b){
+            sandbox.stub(bookService, 'createBook').callsFake(function(userId, b){
                 return Promise.reject(expected);
             });
 
@@ -265,7 +269,7 @@ describe('Book Controller Unit Test Suite', function(){
 
             // Verify
             expect(bookService.createBook.calledOnce).to.equal(true);
-            assert(bookService.createBook.calledWithMatch(book), 'createBook called with book');
+            assert(bookService.createBook.calledWithMatch(USER_ID, book), 'createBook called with book');
             assert(res.send.notCalled);
             assert(res.status.notCalled);
         });
@@ -275,13 +279,11 @@ describe('Book Controller Unit Test Suite', function(){
             // Prepare
             const book = {_id:3, isbn:'12345', title:'Mi Book', authors:[]};
             req.book = book;
-            const expected = 3;
+            const expected = true;
 
             // Mock
-            sandbox.stub(bookService, 'updateBook').callsFake(function(b){
-                // simulate data access layer returning a newly updated record
-                let newBook = utils.cloneObject(b);
-                return Promise.resolve(newBook);
+            sandbox.stub(bookService, 'updateBook').callsFake(function(userId, b){
+                return Promise.resolve(true);
             });
 
             // Run
@@ -293,11 +295,11 @@ describe('Book Controller Unit Test Suite', function(){
                 return res;
             };
             res.json = function(payload) {
-                expect(payload._id).to.equal(expected);
+                expect(payload.success).to.equal(expected);
                 done();
             }
             expect(bookService.updateBook.calledOnce).to.equal(true);
-            assert(bookService.updateBook.calledWithMatch(book), 'updateBook called with book');
+            assert(bookService.updateBook.calledWithMatch(USER_ID, book), 'updateBook called with book');
         });
 
         it ('error updating book', function(done) {
@@ -314,7 +316,7 @@ describe('Book Controller Unit Test Suite', function(){
             };
 
             // Mock
-            sandbox.stub(bookService, 'updateBook').callsFake(function(b){
+            sandbox.stub(bookService, 'updateBook').callsFake(function(userId, b){
                 return Promise.reject(expected);
             });
 
@@ -323,7 +325,7 @@ describe('Book Controller Unit Test Suite', function(){
 
             // Verify
             expect(bookService.updateBook.calledOnce).to.equal(true);
-            assert(bookService.updateBook.calledWithMatch(book), 'updateBook called with book');
+            assert(bookService.updateBook.calledWithMatch(USER_ID, book), 'updateBook called with book');
             assert(res.send.notCalled);
             assert(res.status.notCalled);
         });

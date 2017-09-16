@@ -25,7 +25,7 @@ const authors = [
     {name:'BShort', dob:utils.parseDate('12-13-1999')},
     {name:'CShorts', dob:utils.parseDate('12-14-1999')}
 ];
-
+const USER_ID = 1;
 describe('Author Controller API Tests', function(){
 
     before( (done) => {
@@ -48,7 +48,7 @@ describe('Author Controller API Tests', function(){
         beforeEach((done) => {
             let deferred = [];
             authors.forEach((b) => {
-                deferred.push(authorService.createAuthor(b));
+                deferred.push(authorService.createAuthor(USER_ID, b));
             });
             Promise.all(deferred).then(()=>{
                 done();
@@ -106,9 +106,9 @@ describe('Author Controller API Tests', function(){
 
         it('should get a specific author', (done) =>{
             const author = {name:'ZAuthor', dob:TEST_DOB};
-            authorService.createAuthor(author).then( (b) => {
+            authorService.createAuthor(USER_ID, author).then( (id) => {
                 request(app)
-                    .get(api + '/' + b._id)
+                    .get(api + '/' + id)
                     .set(commonHeaders)
                     .expect(HttpStatus.OK)
                     .expect('Content-Type', /json/)
@@ -117,7 +117,6 @@ describe('Author Controller API Tests', function(){
                             return done(err);
                         } else {
                             expectAuthorsToBeEqual(res.body, author);
-                            //expect(res.body._id).to.equal(author._id);
                             done();
                         }
 
@@ -195,9 +194,7 @@ describe('Author Controller API Tests', function(){
                     if (err) {
                         return done(err);
                     } else {
-                        expect(res.body.name).to.equal('My Title');
-                        expect(res.body.dob).to.eql(TEST_DOB.toISOString());
-                        expect(utils.isValidSequenceId(res.body._id)).to.be.true;
+                        expect(utils.isValidSequenceId(res.body.authorId)).to.be.true;
                         done();
                     }
                 });
@@ -215,7 +212,7 @@ describe('Author Controller API Tests', function(){
 
         it('failed to updated a author due to missing id', (done) =>{
             let author = {name:'ZAuthor', dob:TEST_DOB_STRING};
-            authorService.createAuthor(author).then( (b) => {
+            authorService.createAuthor(USER_ID, author).then( (b) => {
                 const input = {name:'ZAuthors', dob:b.dob};
                 request(app)
                     .put(api + '/' + b._id)
@@ -229,7 +226,7 @@ describe('Author Controller API Tests', function(){
 
         it('failed to updated a author due to empty id', (done) =>{
             let author = {name:'ZAuthor', dob:TEST_DOB_STRING};
-            authorService.createAuthor(author).then( (b) => {
+            authorService.createAuthor(USER_ID, author).then( (b) => {
                 const input = {_id:'', name:'ZAuthors', dob:b.dob};
                 request(app)
                     .put(api + '/' + b._id)
@@ -243,23 +240,26 @@ describe('Author Controller API Tests', function(){
 
         it('successfully updated a author', (done) =>{
             let author = {name:'ZAuthor', dob:TEST_DOB_STRING};
-            authorService.createAuthor(author).then( (b) => {
-                const input = {id:b._id, name:'ZAuthors', dob:b.dob};
-                request(app)
-                    .put(api + '/' + b._id)
-                    .set(commonHeaders)
-                    .send(input)
-                    .expect(HttpStatus.OK)
-                    .expect('Content-Type', /json/)
-                    .end(function(err, res) {
-                        if (err) {
-                            return done(err);
-                        } else {
-                            expect(res.body.name, 'expect name to equal ZAuthors').to.equal('ZAuthors');
-                            done();
-                        }
+            authorService.createAuthor(USER_ID, author).then( (id) => {
+                return authorService.getAuthor(id).then( (author) =>{
+                    const input = {id:author._id, name:'ZAuthors', dob:author.dob};
+                    request(app)
+                        .put(api + '/' + id)
+                        .set(commonHeaders)
+                        .send(input)
+                        .expect(HttpStatus.OK)
+                        .expect('Content-Type', /json/)
+                        .end(function(err, res) {
+                            if (err) {
+                                return done(err);
+                            } else {
+                                expect(res.body.success, 'expect success to be true').to.be.true;
+                                done();
+                            }
 
-                    });
+                        });
+                });
+
             });
         });
     });
@@ -276,7 +276,7 @@ describe('Author Controller API Tests', function(){
         it('deletes authors', (done) =>{
             let deferred = [];
             authors.forEach((b) => {
-                deferred.push(authorService.createAuthor(b));
+                deferred.push(authorService.createAuthor(USER_ID, b));
             });
             Promise.all(deferred)
                 .then(authorService.findAuthors)
@@ -309,7 +309,7 @@ describe('Author Controller API Tests', function(){
         it('deletes authors with no ids provided', (done) =>{
             let deferred = [];
             authors.forEach((b) => {
-                deferred.push(authorService.createAuthor(b));
+                deferred.push(authorService.createAuthor(USER_ID, b));
             });
             Promise.all(deferred)
                 .then(authorService.findAuthors)
@@ -338,7 +338,7 @@ describe('Author Controller API Tests', function(){
         it('deletes authors with at least one invalid id', (done) =>{
             let deferred = [];
             authors.forEach((b) => {
-                deferred.push(authorService.createAuthor(b));
+                deferred.push(authorService.createAuthor(USER_ID, b));
             });
             Promise.all(deferred)
                 .then(authorService.findAuthors)
@@ -365,39 +365,39 @@ describe('Author Controller API Tests', function(){
                 }).catch(done);
         });
 
-        it('fails to delete author referenced by book', (done) =>{
-
-            authorService.createAuthor({name:'Author', dob:TEST_DOB}).then((newAuthor) =>{
-                bookService.createBook({title:'Book', isbn:'1234', authors:[newAuthor._id]}).then((newBook)=>{
-                    const ids = [newAuthor._id];
-                    const input = {ids:ids};
-                    request(app)
-                        .delete(api)
-                        .set(commonHeaders)
-                        .send(input)
-                        .expect(HttpStatus.METHOD_NOT_ALLOWED)
-                        .expect('Content-Type', /json/)
-                        .end(function(err, res) {
-                            if (err) {
-                                return done(err);
-                            } else {
-                                authorService.findAuthors().then((authors) =>{
-                                    expect(authors.length).to.equal(1);
-                                    expect(res.body.length).to.equal(1);
-                                    expect(res.body[0].title).to.equal('Book');
-                                    expect(res.body[0].isbn).to.equal('1234');
-                                    expect(res.body[0].authors.length).to.equal(1);
-                                    expect(res.body[0].authors[0]).to.equal(newAuthor._id);
-                                    done();
-                                }).catch(done);
-                            }
-
-                        });
-                }).catch(done);
+        it('fails to delete author referenced by book', (done) => {
+            let authorId;
+            authorService.createAuthor(USER_ID, {name: 'Author', dob: TEST_DOB}).then((id) => {
+                authorId = id;
+                return authorService.getAuthor(id);
+            }).then((author) => {
+                return bookService.createBook(USER_ID, {title: 'Book', isbn: '1234', authors: [author._id]});
+            }).then((id) => {
+                const ids = [authorId];
+                const input = {ids: ids};
+                request(app)
+                    .delete(api)
+                    .set(commonHeaders)
+                    .send(input)
+                    .expect(HttpStatus.METHOD_NOT_ALLOWED)
+                    .expect('Content-Type', /json/)
+                    .end(function (err, res) {
+                        if (err) {
+                            return done(err);
+                        } else {
+                            authorService.findAuthors().then((authors) => {
+                                expect(authors.length).to.equal(1);
+                                expect(res.body.length).to.equal(1);
+                                expect(res.body[0].title).to.equal('Book');
+                                expect(res.body[0].isbn).to.equal('1234');
+                                expect(res.body[0].authors.length).to.equal(1);
+                                expect(res.body[0].authors[0]).to.equal(authorId);
+                                done();
+                            }).catch(done);
+                        }
+                    });
             }).catch(done);
-
         });
-
     });
 
 
@@ -407,9 +407,11 @@ describe('Author Controller API Tests', function(){
 });
 
 function expectAuthorsToBeEqual(actualAuthor, expectedAuthor) {
-    expect(actualAuthor._id).to.equal(expectedAuthor._id);
+    expect(actualAuthor._id).to.not.be.null;
     expect(actualAuthor.name).to.equal(expectedAuthor.name);
     expect(actualAuthor.dob).to.eql(expectedAuthor.dob.toISOString());
-    expect(actualAuthor.created).to.eql(expectedAuthor.created.toISOString());
-    expect(actualAuthor.updated).to.eql(expectedAuthor.updated.toISOString());
+    expect(actualAuthor.created).to.not.be.a('date');
+    expect(actualAuthor.updated).to.not.be.a('date');
+    expect(actualAuthor.createdBy).to.equal(USER_ID);
+    expect(actualAuthor.updatedBy).to.equal(USER_ID);
 }

@@ -12,7 +12,7 @@ const authorDao = require(SERVER_ROOT + '/author/author.dao');
 
 const assert = chai.assert;
 const expect = chai.expect;
-
+const USER_ID = 1;
 describe('Author DAO Test Suite', function(){
 
     before( (done) => {
@@ -21,7 +21,7 @@ describe('Author DAO Test Suite', function(){
             .then(done)
             .catch ( (err) =>{
                 db.close();
-                done();
+                done(err);
             })
     });
 
@@ -38,14 +38,17 @@ describe('Author DAO Test Suite', function(){
 
     it('create author', (done) =>{
         const expected = newAuthor();
-        authorDao.create(expected).then((actual)=> {
+        authorDao.create(USER_ID, expected).then((id)=> {
+            return authorDao.get(id);
+        }).then((actual) =>{
             expect(actual._id).to.not.be.null;
-            expect(actual.name, 'author title should be My Author').to.equal(expected.name);
+            expect(actual.name, 'author name should be My Author').to.equal(expected.name);
             expect(actual.dob, 'author dob should be 11/1/1999').to.eql(expected.dob);
-            expect(actual.created, 'author.created should be defined').to.not.be.undefined;
-            expect(actual.created, 'author.created should not be null').to.not.be.null;
-            expect(actual.updated, 'author.updated should be defined').to.not.be.undefined;
-            expect(actual.updated, 'author.updated should not be null').to.not.be.null;
+            expect(actual.created, 'author.created should be a date').to.be.a('date');
+            expect(actual.updated, 'author.updated should be a date').to.be.a('date');
+            expect(actual.createdBy, 'author.createdBy should be 1').to.equal(USER_ID);
+            expect(actual.updatedBy, 'author.updatedBy should be 1').to.equal(USER_ID);
+
             done();
         }).catch(done);
     })
@@ -53,27 +56,31 @@ describe('Author DAO Test Suite', function(){
     it('update author', (done) =>{
         const expected = newAuthor();
         const expectedName = 'Mi Author';
-        authorDao.create(expected).then((created)=> {
-            created.name = expectedName;
-            return authorDao.update(created);
+        authorDao.create(USER_ID, expected).then((id)=> {
+            expected._id = id;
+            return authorDao.get(id);
+        }).then((result)=>{
+            result.name = expectedName;
+            return authorDao.update(USER_ID, result);
         }).then((result)=>{
             return authorDao.get(expected._id);
         }).then((actual) =>{
+            //console.log(actual);
             expect(actual._id).to.not.be.null;
             expect(actual.name, 'author name should be Mi Author').to.equal(expectedName);
             expect(actual.dob, 'author dob should be 11/1/1999').to.eql(expected.dob);
-            expect(actual.created, 'author.created should be defined').to.not.be.undefined;
-            expect(actual.created, 'author.created should not be null').to.not.be.null;
-            expect(actual.updated, 'author.updated should be defined').to.not.be.undefined;
-            expect(actual.updated, 'author.updated should not be null').to.not.be.null;
+            expect(actual.created, 'author.created should be a date').to.be.a('date');
+            expect(actual.updated, 'author.updated should be a date').to.be.a('date');
+            expect(actual.createdBy, 'author.createdBy should be 1').to.equal(USER_ID);
+            expect(actual.updatedBy, 'author.updatedBy should be 1').to.equal(USER_ID);
             done();
         }).catch(done);
     });
 
     it('get author', (done) =>{
         const expected = newAuthor();
-        authorDao.create(expected).then((created)=> {
-            return authorDao.get(created._id);
+        authorDao.create(USER_ID, expected).then((id)=> {
+            return authorDao.get(id);
         }).then((actual)=>{
             expect(actual._id).to.not.be.null;
             expect(actual.name, 'author name should be My Author').to.equal(expected.name);
@@ -95,7 +102,7 @@ describe('Author DAO Test Suite', function(){
         ];
         let deferred = [];
         newAuthors.forEach((b) => {
-            deferred.push(authorDao.create(b));
+            deferred.push(authorDao.create(USER_ID, b));
         });
 
         Promise.all(deferred).then(() => {
@@ -117,17 +124,18 @@ describe('Author DAO Test Suite', function(){
         ];
         let deferred = [];
         newAuthors.forEach((b) => {
-            deferred.push(authorDao.create(b));
+            deferred.push(authorDao.create(USER_ID, b));
         });
 
         Promise.all(deferred).then(() => {
             return authorDao.find();
         }).then((results) => {
             expect(results.length).to.equal(4);
-            expectAuthorsToBeEqual(newAuthors[0], results[0]);
-            expectAuthorsToBeEqual(newAuthors[1], results[1]);
-            expectAuthorsToBeEqual(newAuthors[2], results[2]);
-            expectAuthorsToBeEqual(newAuthors[3], results[3]);
+            expectAuthorsToBeEqual(results[0], newAuthors[0]);
+            expectAuthorsToBeEqual(results[1], newAuthors[1]);
+            expectAuthorsToBeEqual(results[2], newAuthors[2]);
+            expectAuthorsToBeEqual(results[3], newAuthors[3]);
+
             done();
         }).catch(done);
 
@@ -141,12 +149,11 @@ function expectAuthorsToBeEqual(actualAuthor, expectedAuthor) {
     expect(utils.isValidSequenceId(actualAuthor._id)).to.be.true;
     expect(actualAuthor.name).to.equal(expectedAuthor.name);
     expect(actualAuthor.dob.toISOString()).to.eql(expectedAuthor.dob.toISOString());
-    expect(actualAuthor.created).to.eql(expectedAuthor.created);
-    expect(actualAuthor.updated).to.eql(expectedAuthor.updated);
+    expect(actualAuthor.created).to.be.a('date');
+    expect(actualAuthor.updated).to.be.a('date');
 }
 
 function newAuthor() {
     const dob = new Date(1999, 11, 1);
-    let author = {name:'My Author', dob:dob};
-    return author;
+    return {name:'My Author', dob:dob};
 }

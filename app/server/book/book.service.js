@@ -25,12 +25,12 @@ function getBook(id) {
     return bookDao.get(id);
 }
 
-function createBook(book) {
-    return bookDao.create(book);
+function createBook(userId, book) {
+    return bookDao.create(userId, book);
 }
 
-function updateBook(book) {
-    return bookDao.update(book);
+function updateBook(userId, book) {
+    return bookDao.update(userId, book);
 }
 
 function deleteBooks(ids) {
