@@ -23,6 +23,7 @@ const bookService = require(SERVER_ROOT + '/book/book.service');
 const sandbox = sinon.sandbox.create();
 const TEST_DATE_STRING = '12-05-2011';
 const testDate = utils.parseDate(TEST_DATE_STRING);
+const USER_ID = 1;
 
 describe('Author Controller Unit Test Suite', function(){
 
@@ -31,7 +32,10 @@ describe('Author Controller Unit Test Suite', function(){
 
         beforeEach(function(){
             res = {};
-            req = {body:{}};
+            req = {
+                body:{},
+                user:{_id:USER_ID}
+            };
             req.query = {};
 
             next = function() {
@@ -201,7 +205,10 @@ describe('Author Controller Unit Test Suite', function(){
 
         beforeEach(function(){
             res = {};
-            req = {body:{}};
+            req = {
+                body:{},
+                user:{_id:USER_ID}
+            };
             req.query = {};
 
             next = function() {
@@ -337,7 +344,7 @@ describe('Author Controller Unit Test Suite', function(){
             };
 
             // Mock
-            sandbox.stub(authorService, 'createAuthor').callsFake(function(b){
+            sandbox.stub(authorService, 'createAuthor').callsFake(function(userId, b){
                 return Promise.reject(expected);
             });
 
@@ -346,7 +353,7 @@ describe('Author Controller Unit Test Suite', function(){
 
             // Verify
             expect(authorService.createAuthor.calledOnce).to.equal(true);
-            assert(authorService.createAuthor.calledWithMatch(author), 'createAuthor called with author');
+            assert(authorService.createAuthor.calledWithMatch(USER_ID, author), 'createAuthor called with author');
             assert(res.send.notCalled);
             assert(res.status.notCalled);
         });
@@ -356,13 +363,12 @@ describe('Author Controller Unit Test Suite', function(){
             // Prepare
             const author = {_id:3, title:'Mi Author', dob:TEST_DATE_STRING};
             req.author = author;
-            const expected = 3;
+            const expected = true;
 
             // Mock
-            sandbox.stub(authorService, 'updateAuthor').callsFake(function(b){
+            sandbox.stub(authorService, 'updateAuthor').callsFake(function(userId, b){
                 // simulate data access layer returning a newly updated record
-                let newAuthor = utils.cloneObject(b);
-                return Promise.resolve(newAuthor);
+                return Promise.resolve(true);
             });
 
             // Run
@@ -374,11 +380,11 @@ describe('Author Controller Unit Test Suite', function(){
                 return res;
             };
             res.json = function(payload) {
-                expect(payload._id).to.equal(expected);
+                expect(payload.success).to.equal(expected);
                 done();
             }
             expect(authorService.updateAuthor.calledOnce).to.equal(true);
-            assert(authorService.updateAuthor.calledWithMatch(author), 'updateAuthor called with author');
+            assert(authorService.updateAuthor.calledWithMatch(USER_ID, author), 'updateAuthor called with author');
         });
 
         it('error updating author', function(done) {
@@ -395,7 +401,7 @@ describe('Author Controller Unit Test Suite', function(){
             };
 
             // Mock
-            sandbox.stub(authorService, 'updateAuthor').callsFake(function(b){
+            sandbox.stub(authorService, 'updateAuthor').callsFake(function(userId, b){
                 return Promise.reject(expected);
             });
 
@@ -404,7 +410,7 @@ describe('Author Controller Unit Test Suite', function(){
 
             // Verify
             expect(authorService.updateAuthor.calledOnce).to.equal(true);
-            assert(authorService.updateAuthor.calledWithMatch(author), 'updateAuthor called with author');
+            assert(authorService.updateAuthor.calledWithMatch(USER_ID, author), 'updateAuthor called with author');
             assert(res.send.notCalled);
             assert(res.status.notCalled);
         });

@@ -72,11 +72,11 @@ function getAuthor(req, res, next) {
  * @param next
  */
 function createAuthor(req, res, next) {
-    let author = req.author;
-    //console.log('createAuthor', author);
-    authorService.createAuthor(author)
-        .then(function(author){
-            res.status(HttpStatus.CREATED).json(author); // with id populated
+    const author = req.author;
+    const userId = req.user._id;
+    authorService.createAuthor(userId, author).then((id) => {
+        const payload = {authorId:id};
+            res.status(HttpStatus.CREATED).json(payload); // with id populated
         }).catch(next);
 }
 
@@ -89,10 +89,12 @@ function createAuthor(req, res, next) {
  * @param next
  */
 function updateAuthor(req, res, next) {
-    let author = req.author;
-    authorService.updateAuthor(author)
+    const author = req.author;
+    const userId = req.user._id;
+    authorService.updateAuthor(userId, author)
         .then(function(b){
-            res.status(HttpStatus.OK).json(b);
+            const payload = {success:true};
+            res.status(HttpStatus.OK).json(payload);
         }).catch(next);
 }
 
@@ -202,7 +204,6 @@ function validateDelete(req, res, next) {
         }
 
     } else {
-        console.log('no book ids');
         next();
     }
 }

@@ -52,24 +52,38 @@ function get(id) {
     return getCollection().findOne({_id:id});
 }
 
-function create(book) {
+function create(userId, book) {
     const now = new Date();
     return new Promise((resolve, reject) => {
         db.next(SEQUENCE_ID).then((next)=>{
-            book._id = next;
-            book.created = now;
-            book.updated = now;
-            getCollection().insertOne(book).then((records) => {
-                resolve(book);
+            const doc = {
+                _id:next,
+                title: book.title,
+                isbn: book.isbn,
+                authors:book.authors,
+                created: now,
+                updated: now,
+                createdBy:userId,
+                updatedBy:userId
+            };
+            getCollection().insertOne(doc).then((records) => {
+                resolve(next);
             }).catch(reject);
         });
     });
 }
 
-function update(book) {
+function update(userId, book) {
     return new Promise((resolve, reject) => {
-        book.updated = new Date();
-        getCollection().update({_id:book._id}, book).then((records) => {
+        const fields = {
+            title: book.title,
+            isbn: book.isbn,
+            authors:book.authors,
+            updated: new Date(),
+            updatedBy:userId
+        };
+        const payload = {$set:fields};
+        getCollection().update({_id:book._id}, payload).then((records) => {
             resolve(book);
         }).catch(reject);
     });

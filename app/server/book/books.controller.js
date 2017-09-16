@@ -53,12 +53,9 @@ function findBooks(req, res, next) {
  * @param next
  */
 function getBook(req, res, next) {
-    //console.log('getBook...', req);
     const id = parseInt(req.params.id);
-    //console.log('bookId: ' + id);
     bookService.getBook(id)
         .then(function(book){
-            //console.log('returned book: ', book);
             res.status(HttpStatus.OK).json(book); // default status: 200
         }).catch(next);
 }
@@ -72,11 +69,12 @@ function getBook(req, res, next) {
  * @param next
  */
 function createBook(req, res, next) {
-    let book = req.book;
-    //console.log('createBook', book);
-    bookService.createBook(book)
-        .then(function(book){
-            res.status(HttpStatus.CREATED).json(book); // with id populated
+    const book = req.book;
+    const userId = req.user._id;
+    bookService.createBook(userId, book)
+        .then(function(id){
+            const payload = {bookId: id};
+            res.status(HttpStatus.CREATED).json(payload); // with id populated
         }).catch(next);
 }
 
@@ -89,10 +87,12 @@ function createBook(req, res, next) {
  * @param next
  */
 function updateBook(req, res, next) {
-    let book = req.book;
-    bookService.updateBook(book)
+    const book = req.book;
+    const userId = req.user._id;
+    bookService.updateBook(userId, book)
         .then(function(b){
-            res.status(HttpStatus.OK).json(b);
+            const payload = {success:true};
+            res.status(HttpStatus.OK).json(payload);
         }).catch(next);
 }
 
@@ -201,15 +201,6 @@ function toBook(req) {
     return book;
 }
 
-///**
-// * Facilitates creating an Error message for missing or invalid request parameters.
-// * @param param
-// * @returns {Error}
-// */
-//function newParamValidationError(param) {
-//    const message = 'Missing or invalid request parameter: [' + param + '] must be defined and non-empty';
-//    return new InvalidRequestError(message);
-//}
 
 /**
  * Build out a book query object from information in

@@ -16,6 +16,7 @@ const bookService = require(SERVER_ROOT +'/book/book.service');
 const api = '/api/books';
 const app = server.init();
 const commonHeaders = testUtils.getCommonHeaders();
+const USER_ID = 1;
 
 describe('Book Controller API Tests', function(){
 
@@ -46,7 +47,7 @@ describe('Book Controller API Tests', function(){
             ];
             let deferred = [];
             books.forEach((b) => {
-                deferred.push(bookService.createBook(b));
+                deferred.push(bookService.createBook(USER_ID, b));
             });
             Promise.all(deferred).then(()=>{
                 done();
@@ -63,8 +64,8 @@ describe('Book Controller API Tests', function(){
             request(app)
                 .get(api)
                 .set(commonHeaders)
-                .expect('Content-Type', /json/)
                 .expect(HttpStatus.OK)
+                .expect('Content-Type', /json/)
                 .end(function(err, res) {
                     if (err) {
                         console.log(err);
@@ -104,17 +105,17 @@ describe('Book Controller API Tests', function(){
 
         it('should get a specific book', (done) =>{
             let book = {title:'ZBook', isbn:'1230', authors:[]};
-            bookService.createBook(book).then( (b) => {
+            bookService.createBook(USER_ID, book).then( (id) => {
                 request(app)
-                    .get(api + '/' + b._id)
+                    .get(api + '/' + id)
                     .set(commonHeaders)
-                    .expect('Content-Type', /json/)
                     .expect(HttpStatus.OK)
+                    .expect('Content-Type', /json/)
                     .end(function(err, res) {
                         if (err) {
                             return done(err);
                         } else {
-                            expect(res.body._id).to.equal(book._id);
+                            expect(res.body._id).to.equal(id);
                             done();
                         }
 
@@ -138,8 +139,8 @@ describe('Book Controller API Tests', function(){
                 .post(api)
                 .set(commonHeaders)
                 .send(input)
-                .expect('Content-Type', /json/)
                 .expect(HttpStatus.BAD_REQUEST)
+                .expect('Content-Type', /json/)
                 .end(done);
 
         });
@@ -150,8 +151,8 @@ describe('Book Controller API Tests', function(){
                 .post(api)
                 .set(commonHeaders)
                 .send(input)
-                .expect('Content-Type', /json/)
                 .expect(HttpStatus.BAD_REQUEST)
+                .expect('Content-Type', /json/)
                 .end(done);
 
         });
@@ -162,14 +163,13 @@ describe('Book Controller API Tests', function(){
                 .post(api)
                 .set(commonHeaders)
                 .send(input)
-                .expect('Content-Type', /json/)
                 .expect(HttpStatus.CREATED)
+                .expect('Content-Type', /json/)
                 .end(function(err, res) {
                     if (err) {
                         return done(err);
                     } else {
-                        expect(res.body.title).to.equal('My Title');
-                        expect(utils.isValidSequenceId(res.body._id)).to.be.true;
+                        expect(utils.isValidSequenceId(res.body.bookId)).to.be.true;
                         done();
                     }
                 });
@@ -187,47 +187,53 @@ describe('Book Controller API Tests', function(){
 
         it('failed to updated a book due to missing id', (done) =>{
             let book = {title:'ZBook', isbn:'1230', authors:[]};
-            bookService.createBook(book).then( (b) => {
+            bookService.createBook(USER_ID, book).then( (id) => {
+                return bookService.getBook(id);
+            }).then( (b) => {
                 const input = {title:'ZBooks', isbn:b.isbn, authors:b.authors};
                 request(app)
                     .put(api + '/' + b._id)
                     .set(commonHeaders)
                     .send(input)
-                    .expect('Content-Type', /json/)
                     .expect(HttpStatus.BAD_REQUEST)
+                    .expect('Content-Type', /json/)
                     .end(done);
-            });
+            }).catch(done);
         });
 
         it('failed to updated a book due to empty id', (done) =>{
             let book = {title:'ZBook', isbn:'1230', authors:[]};
-            bookService.createBook(book).then( (b) => {
+            bookService.createBook(USER_ID, book).then( (id) => {
+                return bookService.getBook(id);
+            }).then( (b) => {
                 const input = {_id:'', title:'ZBooks', isbn:b.isbn, authors:b.authors};
                 request(app)
                     .put(api + '/' + b._id)
                     .set(commonHeaders)
                     .send(input)
-                    .expect('Content-Type', /json/)
                     .expect(HttpStatus.BAD_REQUEST)
+                    .expect('Content-Type', /json/)
                     .end(done);
             });
         });
 
         it('successfully updated a book', (done) =>{
             let book = {title:'ZBook', isbn:'1230', authors:[]};
-            bookService.createBook(book).then( (b) => {
+            bookService.createBook(USER_ID, book).then( (id) => {
+                return bookService.getBook(id);
+            }).then( (b) => {
                 const input = {id:b._id, title:'ZBooks', isbn:b.isbn, authors:b.authors};
                 request(app)
                     .put(api + '/' + b._id)
                     .set(commonHeaders)
                     .send(input)
-                    .expect('Content-Type', /json/)
                     .expect(HttpStatus.OK)
+                    .expect('Content-Type', /json/)
                     .end(function(err, res) {
                         if (err) {
                             return done(err);
                         } else {
-                            expect(res.body.title, 'expect title to equal ZBooks').to.equal('ZBooks');
+                            expect(res.body.success, 'expect success to equal true').to.be.true;
                             done();
                         }
 
@@ -245,17 +251,7 @@ describe('Book Controller API Tests', function(){
         })
 
         it ('deletes books', (done) =>{
-            const books = [
-                {title:'ABook', isbn:'1234', authors:[]},
-                {title:'ANovel', isbn:'1235', authors:[]},
-                {title:'BShort', isbn:'1236', authors:[]},
-                {title:'CShorts', isbn:'1237', authors:[]}
-            ];
-            let deferred = [];
-            books.forEach((b) => {
-                deferred.push(bookService.createBook(b));
-            });
-            Promise.all(deferred)
+            createBooksToDelete()
                 .then(bookService.findBooks)
                 .then((books)=>{
                     let ids = [];
@@ -284,17 +280,7 @@ describe('Book Controller API Tests', function(){
         });
 
         it ('deletes books with no ids provided', (done) =>{
-            const books = [
-                {title:'ABook', isbn:'1234', authors:[]},
-                {title:'ANovel', isbn:'1235', authors:[]},
-                {title:'BShort', isbn:'1236', authors:[]},
-                {title:'CShorts', isbn:'1237', authors:[]}
-            ];
-            let deferred = [];
-            books.forEach((b) => {
-                deferred.push(bookService.createBook(b));
-            });
-            Promise.all(deferred)
+            createBooksToDelete()
                 .then(bookService.findBooks)
                 .then((books)=>{
                     let ids = [];
@@ -319,17 +305,7 @@ describe('Book Controller API Tests', function(){
         });
 
         it ('deletes books with at least one invalid id', (done) =>{
-            const books = [
-                {title:'ABook', isbn:'1234', authors:[]},
-                {title:'ANovel', isbn:'1235', authors:[]},
-                {title:'BShort', isbn:'1236', authors:[]},
-                {title:'CShorts', isbn:'1237', authors:[]}
-            ];
-            let deferred = [];
-            books.forEach((b) => {
-                deferred.push(bookService.createBook(b));
-            });
-            Promise.all(deferred)
+            createBooksToDelete()
                 .then(bookService.findBooks)
                 .then((books)=>{
                     let ids = [1,2,3,'y'];
@@ -368,4 +344,19 @@ function expectBooksToBeEqual(actualBook, expectedBook) {
     expect(actualBook.isbn).to.equal(expectedBook.isbn);
     expect(actualBook.authors).to.eql(expectedBook.authors);
     expect(actualBook.created).to.equal(actualBook.updated);
+}
+
+function createBooksToDelete() {
+        const books = [
+            {title:'ABook', isbn:'1234', authors:[]},
+            {title:'ANovel', isbn:'1235', authors:[]},
+            {title:'BShort', isbn:'1236', authors:[]},
+            {title:'CShorts', isbn:'1237', authors:[]}
+        ];
+        let deferred = [];
+        books.forEach((b) => {
+            deferred.push(bookService.createBook(USER_ID, b));
+        });
+        return Promise.all(deferred);
+
 }
